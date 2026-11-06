@@ -1,0 +1,51 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="theme-color" content="#14100a">
+<title>Billing — Agent Portal</title>
+<meta name="description" content="Agent Portal billing: $499 a month. Payment is not switched on yet.">
+<link rel="manifest" href="manifest.json">
+<link rel="icon" href="icon-192.png">
+<link rel="stylesheet" href="styles.css">
+</head>
+<body>
+<header class="topbar">
+  <div class="brand" id="brand">AGENT PORTAL<small>READY BUYERS FOR AGENTS</small></div>
+  <nav><a href="index.html">Sign in</a> <a href="board.html">Board</a> <a href="my-leads.html">My leads</a> <a href="about.html">About</a></nav>
+</header>
+<div class="sample-banner">SAMPLE DEMO — no real buyers, no real people</div>
+<main class="wrap">
+  <h1>Billing</h1>
+  <div class="gold-rule"></div>
+
+  <p><strong>Payment is NOT switched on yet.</strong> There is no payment link on this page, no charge is made, and no subscription exists. When payment opens, Bge will send you the payment link himself — nothing here will charge you on its own.</p>
+
+  <h2>$499 a month, per agent</h2>
+  <p>One flat price, every month, for each agent on the portal. No fee per buyer, no charge per lead, no hidden extras.</p>
+
+  <h2>What it includes</h2>
+  <ul class="plain">
+    <li>Ready buyers on the board — buyers who answered the six readiness questions and said yes to a call.</li>
+    <li>One buyer to one agent — when you claim a buyer, they leave the board and no other agent can claim them.</li>
+    <li>The handover sheet for every buyer you claim — name, phone, email, what they want, and a booked call time.</li>
+    <li>Your booked call — the buyer already agreed to the call time on the sheet.</li>
+    <li>Your claimed leads, with outcomes, in one place.</li>
+  </ul>
+
+  <h2>How payment will work</h2>
+  <p>When payment opens, you pay $499 a month through Stripe, on Stripe's own payment page — card, Apple Pay, Google Pay, or bank account. The charge repeats every month until you cancel.</p>
+  <p>Access is switched on by hand: Bge checks the payment in Stripe, then hands you your passcode. If a payment fails or you cancel, Bge switches your access off.</p>
+
+  <h2>Cancel anytime</h2>
+  <p>You can cancel at any time — tell Bge, or cancel the subscription yourself in Stripe. Cancelling stops the next monthly charge. It does not refund the month already paid, and your access ends when that month ends.</p>
+
+  <p><a class="btn" href="index.html">Back to sign in</a></p>
+  <footer>Agent Portal · Demo only — SAMPLE buyers, no real people. No payment is taken on this page.</footer>
+</main>
+<script src="data.js"></script>
+<script src="app.js"></script>
+<script>renderTopbar();</script>
+</body>
+</html>

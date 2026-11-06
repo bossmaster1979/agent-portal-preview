@@ -1,13 +1,39 @@
-/* Agent Portal — demo-only logic. Everything is stored on this phone
-   only (localStorage — a small store your browser keeps on the device).
-   Nothing is sent anywhere. No real sign-in service, no passwords. */
+/* Agent Portal — sign-in, claims, outcomes.
+ *
+ * TWO MODES, one file:
+ *  - DEMO mode (APP_CONFIG.apiBase is empty — this is how the GitHub
+ *    Pages preview runs): everything is stored on this phone only
+ *    (localStorage — a small store your browser keeps on the device).
+ *    Nothing is sent anywhere. The passcode box on the sign-in page
+ *    is not checked in demo mode.
+ *  - LIVE mode (apiBase set to the Cloudflare Worker address — see
+ *    worker/README.md): sign-in, board, claims, and outcomes go
+ *    through the Worker, so every phone sees the same board and the
+ *    same claims. The Worker checks the passcode and is the only
+ *    thing that talks to the shared database.
+ *
+ * The rules are the same in both modes: masked board, one buyer to
+ * one agent, Quinton-only for buyers who said no to pass-on,
+ * handover sheet only after a claim, outcomes on My leads. */
+
+/* THE ONE SETTING: put the Worker address here to go live, e.g.
+   "https://agent-portal-worker.<your-name>.workers.dev".
+   Leave it empty ("") and the app runs in DEMO mode. */
+const APP_CONFIG = { apiBase: "" };
+
 const LS_AGENT = "agentPortal.agent";
-const LS_CLAIMS = "agentPortal.claims";     // { buyerId: { agentId, agentName, claimedAt } }
-const LS_OUTCOMES = "agentPortal.outcomes"; // { buyerId: "called" | "no-answer" | "closed" }
+const LS_CLAIMS = "agentPortal.claims";     // demo mode: { buyerId: { agentId, agentName, claimedAt } }
+const LS_OUTCOMES = "agentPortal.outcomes"; // demo mode: { buyerId: "called" | "no-answer" | "closed" }
+const LS_TOKEN = "agentPortal.token";       // live mode: session token from the Worker
+
+function isLive() { return !!APP_CONFIG.apiBase; }
 
 function getAgent() {
   try { return JSON.parse(localStorage.getItem(LS_AGENT) || "null"); } catch (e) { return null; }
 }
+function getToken() { return localStorage.getItem(LS_TOKEN) || ""; }
+
+/* ---- demo-mode stores (this phone only) ---- */
 function getClaims() {
   try { return JSON.parse(localStorage.getItem(LS_CLAIMS) || "{}"); } catch (e) { return {}; }
 }
@@ -17,19 +43,52 @@ function getOutcomes() {
 function saveClaims(c) { localStorage.setItem(LS_CLAIMS, JSON.stringify(c)); }
 function saveOutcomes(o) { localStorage.setItem(LS_OUTCOMES, JSON.stringify(o)); }
 
-function signIn(agentId) {
+/* ---- live-mode calls to the Worker ---- */
+async function api(path, opts) {
+  // cache: "no-store" matters: without it the browser can serve a
+  // stale board from its HTTP cache and a claim by another agent
+  // would not show up until the cache expired.
+  const res = await fetch(APP_CONFIG.apiBase + path, Object.assign({
+    cache: "no-store",
+    headers: { "Content-Type": "application/json", "Authorization": "Bearer " + getToken() },
+  }, opts || {}));
+  let data = {};
+  try { data = await res.json(); } catch (e) { /* empty answer */ }
+  return { status: res.status, data };
+}
+
+/* ---- sign-in: name + passcode ----
+   Demo mode: the passcode is not checked — anyone can sign in as any
+   agent, and it says so on the sign-in page. Live mode: the Worker
+   checks the passcode and hands back a token. */
+async function signIn(agentId, passcode) {
   const agent = AGENTS.find(a => a.id === agentId);
-  if (!agent) return;
-  localStorage.setItem(LS_AGENT, JSON.stringify(agent));
+  if (!agent) return { ok: false, error: "no-such-agent" };
+  if (!isLive()) {
+    localStorage.setItem(LS_AGENT, JSON.stringify(agent));
+    location.href = "board.html";
+    return { ok: true };
+  }
+  if (!passcode) return { ok: false, error: "need-passcode" };
+  const { status, data } = await api("/api/signin", {
+    method: "POST", body: JSON.stringify({ agentId, passcode }),
+  });
+  if (status === 429) return { ok: false, error: "locked-out" };
+  if (!data.ok) return { ok: false, error: "wrong-passcode" };
+  localStorage.setItem(LS_TOKEN, data.token);
+  localStorage.setItem(LS_AGENT, JSON.stringify({ id: data.agent.id, name: data.agent.name }));
   location.href = "board.html";
+  return { ok: true };
 }
 function signOut() {
   localStorage.removeItem(LS_AGENT);
+  localStorage.removeItem(LS_TOKEN);
   location.href = "index.html";
 }
 
-/* Claim one buyer. One buyer to one agent — if anyone already claimed
-   this buyer, the claim is refused and nothing changes.
+/* ---- claims ----
+   Demo mode (sync, this phone only): the original rule. Kept sync so
+   the Playwright test can call claimBuyer() directly.
    Pass-on rule (from the plan): a buyer who said NO to being passed
    to another agent goes to Quinton only. Any other agent is refused. */
 function canClaim(buyerId) {
@@ -50,11 +109,82 @@ function claimBuyer(buyerId) {
   saveClaims(claims);
   return true;
 }
+/* Live mode (async): the Worker decides, with its one conditional
+   UPDATE — exactly one agent wins. Returns { ok } or { ok:false,
+   error: "already-claimed" | "quinton-only" | "not-signed-in" }. */
+async function claimBuyerLive(buyerId) {
+  const { status, data } = await api("/api/claim", {
+    method: "POST", body: JSON.stringify({ buyerId }),
+  });
+  if (status === 401) return { ok: false, error: "not-signed-in" };
+  if (data.ok) return { ok: true };
+  return { ok: false, error: data.error || "already-claimed" };
+}
 
 function setOutcome(buyerId, outcome) {
   const outcomes = getOutcomes();
   outcomes[buyerId] = outcome;
   saveOutcomes(outcomes);
+}
+async function recordOutcome(buyerId, outcome) {
+  if (!isLive()) { setOutcome(buyerId, outcome); return { ok: true }; }
+  const { data } = await api("/api/outcome", {
+    method: "POST", body: JSON.stringify({ buyerId, outcome }),
+  });
+  return { ok: !!data.ok, error: data.error };
+}
+
+/* ---- data for the pages: same shape in both modes ----
+   Masked buyer: id, area, budget, timeline, preapproval, readySince,
+   scrubDate, passOnConsent. No name, phone, or email — ever. */
+function maskedBuyer(b) {
+  return {
+    id: b.id, area: b.area, budget: b.budget, timeline: b.timeline,
+    preapproval: b.preapproval, readySince: b.readySince,
+    scrubDate: b.scrubDate, passOnConsent: b.passOnConsent,
+  };
+}
+async function loadBoardData() {
+  if (!isLive()) {
+    return { buyers: BUYERS.map(maskedBuyer), claims: getClaims() };
+  }
+  const { status, data } = await api("/api/board");
+  if (status === 401) return { notSignedIn: true, buyers: [], claims: {} };
+  if (!data.ok) return { buyers: [], claims: {}, loadError: true };
+  return { buyers: data.buyers, claims: {} }; // live board lists unclaimed only
+}
+async function loadHandoverData(buyerId) {
+  const buyer = buyerById(buyerId);
+  if (!buyer) return { status: "no-such-buyer" };
+  if (!isLive()) {
+    const claims = getClaims();
+    if (!claims[buyerId]) return { status: "not-claimed" };
+    if (claims[buyerId].agentId !== getAgent().id) {
+      return { status: "already-claimed", claimedByName: claims[buyerId].agentName };
+    }
+    return { status: "ok", buyer, claimedAt: claims[buyerId].claimedAt };
+  }
+  const { status, data } = await api("/api/handover?buyer=" + encodeURIComponent(buyerId));
+  if (status === 401) return { status: "not-signed-in" };
+  if (!data.ok) {
+    if (data.error === "not-claimed") return { status: "not-claimed" };
+    if (data.error === "already-claimed") return { status: "already-claimed", claimedByName: data.claimedByName };
+    return { status: "no-such-buyer" };
+  }
+  return { status: "ok", buyer: data.buyer, claimedAt: data.buyer.claimedAt };
+}
+async function loadMyLeadsData() {
+  const agent = getAgent();
+  if (!isLive()) {
+    const claims = getClaims();
+    const outcomes = getOutcomes();
+    const mine = BUYERS.filter(b => claims[b.id] && claims[b.id].agentId === agent.id);
+    return { leads: mine.map(b => Object.assign({}, b, { claimedAt: claims[b.id].claimedAt })), outcomes };
+  }
+  const { status, data } = await api("/api/my-leads");
+  if (status === 401) return { notSignedIn: true, leads: [], outcomes: {} };
+  if (!data.ok) return { leads: [], outcomes: {}, loadError: true };
+  return { leads: data.leads, outcomes: data.outcomes };
 }
 
 function agentById(id) { return AGENTS.find(a => a.id === id) || null; }
@@ -76,6 +206,12 @@ function renderTopbar() {
     } else {
       brand.innerHTML = "AGENT PORTAL<small>READY BUYERS FOR AGENTS</small>";
     }
+  }
+  const mode = document.getElementById("mode-note");
+  if (mode) {
+    mode.textContent = isLive()
+      ? "Live mode — signed in through the shared server, claims are shared with all agents."
+      : "Demo mode — no server connected. Sign-in is not checked and claims stay on this phone only.";
   }
 }
 

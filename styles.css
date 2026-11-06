@@ -96,3 +96,16 @@ ul.plain li { margin: 6px 0; }
 footer { border-top: 1px solid var(--line); margin-top: 32px; padding-top: 12px; font-size: 14px; color: var(--muted); }
 :focus-visible { outline: 2px solid var(--gold-bright); outline-offset: 2px; }
 @media (max-width: 420px) { body { font-size: 16px; } h1 { font-size: 24px; } }
+
+/* Sign-in passcode box + billing page (added Nov 6, 2026). */
+input[type="password"] {
+  width: 100%;
+  max-width: 320px;
+  padding: 10px;
+  font-size: 16px;
+  border: 1px solid var(--gold);
+  border-radius: 6px;
+  background: #fff;
+  color: #222;
+  box-sizing: border-box;
+}

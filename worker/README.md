@@ -1,0 +1,101 @@
+# Agent Portal Worker — deployable, NOT deployed
+
+Owner: Bge. The Worker is the shared store + sign-in check for the
+Agent Portal app: one Cloudflare Worker + one D1 database (free tier).
+Going live is the owner's tap — nothing here has been deployed, and
+no Cloudflare account was touched by this build.
+
+## What it does
+
+- `POST /api/signin` — checks an agent's passcode against a stored
+  PBKDF2 hash (100,000 rounds, SHA-256, per-passcode salt — see the
+  comment at the top of `worker.js` for why). Hands back a session
+  token good for one day. Locks an agent out for 15 minutes after
+  5 wrong guesses.
+- `GET /api/board` — masked board only: area, budget, timeline,
+  pre-approval, date ready, checks passed. Never names/phones/emails.
+- `POST /api/claim` — ONE conditional UPDATE ("mark claimed only if
+  nobody claimed it yet"), so exactly one agent wins even if two tap
+  Claim at the same second. D1 has no BEGIN/COMMIT transactions, so
+  this single step is the safe way. Also enforces the Quinton-only
+  rule for buyers who said no to pass-on, on the server.
+- `GET /api/handover?buyer=X` — full details only for the agent who
+  claimed that buyer.
+- `GET /api/my-leads` — buyers this agent claimed, with outcomes.
+- `POST /api/outcome` — records called / no-answer / deal closed,
+  only for the agent who claimed the buyer.
+- `GET /api/health` — no sign-in needed, just "ok".
+
+## Files
+
+| File | What it is |
+|---|---|
+| `worker.js` | The Worker. All endpoints, hashing, lockout, claim step. |
+| `wrangler.toml` | Worker name + D1 binding. `database_id` is a placeholder until deploy. |
+| `schema.sql` | D1 tables + the 5 SAMPLE buyers + the 3 agents. Passcodes seeded as `NOT-SET` — no passcode works until Bge sets one. |
+| `hash-passcode.mjs` | Makes a salt + hash for one agent's passcode. Run locally, store the hash in D1. The passcode itself is never stored. |
+| `README.md` | This file. |
+
+## Deploy steps (for later — do NOT run until the owner says go)
+
+```sh
+cd ~/workspace/projects/agent-portal-app/worker
+npx wrangler login            # Cloudflare account that already holds Quinton's site
+npx wrangler d1 create agent-portal
+# copy the real database_id it prints into wrangler.toml
+npx wrangler d1 execute agent-portal --remote --file schema.sql
+# one passcode per agent (8+ characters, handed over by call/text):
+node hash-passcode.mjs quinton <passcode>
+# run the UPDATE line it prints, then repeat for each agent
+npx wrangler deploy
+# copy the Worker address it prints (https://agent-portal-worker.<name>.workers.dev)
+```
+
+Then set that address as `APP_CONFIG.apiBase` at the top of
+`app.js` in the app, and redeploy the app. Until then the app runs
+in DEMO mode (see the app README).
+
+## Local test (no account needed)
+
+```sh
+cd ~/workspace/projects/agent-portal-app/worker
+npx wrangler dev --local --port 8787
+# in another shell: set a test passcode in the LOCAL database only
+node hash-passcode.mjs quinton test-passcode-123
+npx wrangler d1 execute agent-portal --local --command "UPDATE agents SET passcode_hash = '<hash>', passcode_salt = '<salt>' WHERE id = 'quinton';"
+curl http://localhost:8787/api/health
+```
+
+The local database lives under `.wrangler/state/` and is never
+committed. Test passcodes only ever exist there.
+
+## Switching an agent off
+
+No code change, no redeploy:
+
+```sh
+npx wrangler d1 execute agent-portal --remote --command "UPDATE agents SET approved = 0 WHERE id = '<agent-id>';"
+```
+
+Their token stops working at once, and sign-in is refused.
+
+## Honest limits (from money-path-research.md)
+
+- Polling, not instant: phones re-read the board every 20–30
+  seconds. A claim shows on another phone a few seconds later.
+- D1 read-after-write delay is unverified: a second phone might
+  briefly show a buyer as free after it was claimed. The claim
+  itself is safe (one winner); the app handles "sorry, just
+  claimed".
+- Free tier has no uptime promise, community support only. Re-check
+  the Workers/D1 pricing page on the day of the deploy.
+- Cloudflare is a company service, not open-source software. The
+  code here is Bge's own; the data is plain SQL and can be moved.
+- A passcode is a shared secret, not a full account. If one leaks,
+  change it fast. No "forgot my passcode" button — the agent asks
+  Bge, who sets a new one. Past ~20 agents, switch to Firebase Auth
+  (see the research file).
+- The app does NOT check Stripe. Bge looks in the Stripe Dashboard,
+  sees an active $499/month subscription, and only then hands over
+  a passcode. If a payment fails or an agent cancels, Bge switches
+  the agent off by hand (see above).

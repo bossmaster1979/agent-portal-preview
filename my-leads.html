@@ -18,10 +18,11 @@
 <div class="sample-banner">SAMPLE DEMO — every buyer below is made up</div>
 <main class="wrap">
   <p class="muted" id="whoami"></p>
+  <p class="muted" id="mode-note"></p>
   <h1>My leads</h1>
   <div class="gold-rule"></div>
-  <p>Buyers you claimed. Tap what happened after your call — it is saved on this phone only.</p>
-  <div id="mine"></div>
+  <p>Buyers you claimed. Tap what happened after your call — it is saved on this phone only in demo mode, and shared with the server in live mode.</p>
+  <div id="mine"><p>Loading…</p></div>
   <p><a href="board.html">Back to the board</a></p>
   <footer>Agent Portal · Demo only — SAMPLE buyers, no real people.</footer>
 </main>
@@ -31,28 +32,35 @@
   renderTopbar();
   const agent = getAgent();
   if (!agent) { location.href = "index.html"; }
-  const claims = getClaims();
-  const outcomes = getOutcomes();
-  const mine = BUYERS.filter(b => claims[b.id] && claims[b.id].agentId === agent.id);
-  const el = document.getElementById("mine");
   const labels = { "called": "Called — spoke to the buyer", "no-answer": "No answer", "closed": "Deal closed" };
-  if (mine.length === 0) {
-    el.innerHTML = "<p>You have not claimed a buyer yet. <a href=\"board.html\">Go to the board</a> and claim one.</p>";
-  } else {
-    el.innerHTML = mine.map(b => {
-      const out = outcomes[b.id];
-      return '<div class="card"><h3><span class="sample-tag">SAMPLE</span> Ready buyer ' + esc(b.id) + ' — ' + esc(b.firstName) + '</h3>' +
-      '<p>' + esc(b.area) + ' · ' + esc(b.budget) + ' · ' + esc(b.timeline) + ' · Pre-approved: ' + esc(b.preapproval) + '</p>' +
-      '<p>Claimed ' + esc(claims[b.id].claimedAt) + '</p>' +
-      (out ? '<p>Outcome: <span class="outcome">' + esc(labels[out]) + '</span></p>' : '<p>No outcome recorded yet.</p>') +
-      '<p>What happened?</p>' +
-      '<button class="btn" onclick="mark(\'' + b.id + '\', \'called\')">Called</button>' +
-      '<button class="btn secondary" onclick="mark(\'' + b.id + '\', \'no-answer\')">No answer</button>' +
-      '<button class="btn secondary" onclick="mark(\'' + b.id + '\', \'closed\')">Deal closed</button><br>' +
-      '<a class="btn secondary" href="handover.html?buyer=' + b.id + '">See handover sheet</a></div>';
-    }).join("");
-  }
-  function mark(id, outcome) { setOutcome(id, outcome); location.reload(); }
+  (async () => {
+    const data = await loadMyLeadsData();
+    if (data.notSignedIn) { location.href = "index.html"; return; }
+    const el = document.getElementById("mine");
+    const mine = data.leads;
+    const outcomes = data.outcomes;
+    if (data.loadError) {
+      el.innerHTML = "<p><strong>Your leads did not load.</strong> Check your connection and try again.</p>";
+      return;
+    }
+    if (mine.length === 0) {
+      el.innerHTML = "<p>You have not claimed a buyer yet. <a href=\"board.html\">Go to the board</a> and claim one.</p>";
+    } else {
+      el.innerHTML = mine.map(b => {
+        const out = outcomes[b.id];
+        return '<div class="card"><h3><span class="sample-tag">SAMPLE</span> Ready buyer ' + esc(b.id) + ' — ' + esc(b.firstName) + '</h3>' +
+        '<p>' + esc(b.area) + ' · ' + esc(b.budget) + ' · ' + esc(b.timeline) + ' · Pre-approved: ' + esc(b.preapproval) + '</p>' +
+        '<p>Claimed ' + esc(b.claimedAt) + '</p>' +
+        (out ? '<p>Outcome: <span class="outcome">' + esc(labels[out]) + '</span></p>' : '<p>No outcome recorded yet.</p>') +
+        '<p>What happened?</p>' +
+        '<button class="btn" onclick="mark(\'' + b.id + '\', \'called\')">Called</button>' +
+        '<button class="btn secondary" onclick="mark(\'' + b.id + '\', \'no-answer\')">No answer</button>' +
+        '<button class="btn secondary" onclick="mark(\'' + b.id + '\', \'closed\')">Deal closed</button><br>' +
+        '<a class="btn secondary" href="handover.html?buyer=' + b.id + '">See handover sheet</a></div>';
+      }).join("");
+    }
+  })();
+  async function mark(id, outcome) { await recordOutcome(id, outcome); location.reload(); }
 </script>
 </body>
 </html>
