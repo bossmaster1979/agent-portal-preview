@@ -61,12 +61,22 @@ function agentById(id) { return AGENTS.find(a => a.id === id) || null; }
 function buyerById(id) { return BUYERS.find(b => b.id === id) || null; }
 function esc(s) { return String(s).replace(/[&<>"]/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c])); }
 
-/* Top bar on every page: shows who is signed in, or a Sign in link. */
+/* Top bar on every page: shows who is signed in, or a Sign in link.
+   The brand in the header is the signed-in agent's own name — never
+   another agent's name. Signed out, it just says AGENT PORTAL. */
 function renderTopbar() {
-  const el = document.getElementById("whoami");
-  if (!el) return;
   const agent = getAgent();
-  el.textContent = agent ? ("Signed in as " + agent.name) : "";
+  const el = document.getElementById("whoami");
+  if (el) el.textContent = agent ? ("Signed in as " + agent.name) : "";
+  const brand = document.getElementById("brand");
+  if (brand) {
+    if (agent) {
+      brand.innerHTML = esc(agent.name.toUpperCase()) + "<small>AGENT PORTAL</small>";
+      document.title = agent.name + " — Agent Portal";
+    } else {
+      brand.innerHTML = "AGENT PORTAL<small>READY BUYERS FOR AGENTS</small>";
+    }
+  }
 }
 
 /* Ask the browser about installing the app. Works on Android Chrome;

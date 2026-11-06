@@ -24,8 +24,11 @@ test("portal: sign-in, board masked, claim, double-claim refused, handover gated
   await expect(page.locator("body")).toContainText("no password in this demo");
 
   // 2. Sign in as Quinton -> board with 5 masked SAMPLE buyers, no phone/email visible.
+  // The header now says the signed-in agent's own name, not anyone else's.
   await agentCards.nth(0).locator("button").click();
   await expect(page).toHaveURL(/board\.html/);
+  await expect(page.locator("#brand")).toContainText("QUINTON SANCHEZ");
+  await expect(page.locator("#brand")).toContainText("AGENT PORTAL");
   await expect(page.locator("#board .card")).toHaveCount(5);
   const boardText = await page.locator("#board").innerText();
   expect(boardText).not.toContain("(555)");
@@ -69,6 +72,9 @@ test("portal: sign-in, board masked, claim, double-claim refused, handover gated
   await page.goto(BASE + "/index.html");
   await page.locator("#agent-list .card").nth(1).locator("button").click();
   await expect(page).toHaveURL(/board\.html/);
+  // Maria signed in: the header says MARIA TORRES now, not Quinton.
+  await expect(page.locator("#brand")).toContainText("MARIA TORRES");
+  await expect(page.locator("#brand")).not.toContainText("QUINTON");
   await expect(page.locator("#board")).not.toContainText("Ready buyer A");
   await expect(page.locator("#board .card", { hasText: "Ready buyer C" })).toContainText("Quinton only");
   await expect(page.locator("#board .card", { hasText: "Ready buyer C" }).locator("button")).toHaveCount(0);
