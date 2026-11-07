@@ -17,16 +17,13 @@ phone) makes it open fast and work offline.
 
 ## What was reused, not built from zero
 
-- Ready-buyer demo (`~/workspace/projects/ready-buyer-website/demo/`):
-  the three SAMPLE buyers (A North Park, B La Jolla, C Chula Vista),
-  the masked board shape, the six-question / three-consent rules.
-- Parked multi-user build (`~/workspace/multi-user-build/`):
-  the gate rule (a buyer only shows when the do-not-call check date
+- The SAMPLE buyers (A North Park, B La Jolla, D Pacific Beach,
+  E Escondido), the masked board shape, the six-question /
+  three-consent rules.
+- The gate rule (a buyer only shows when the do-not-call check date
   + call/text/email consent are recorded and they did not opt out)
-  and the one-buyer-to-one-agent rule. The parked stack was NOT
-  booted (it needs Docker, not on this VM) — only its rules and
-  logic were reused as files.
-- Quinton's gold/dark luxury style from his live site.
+  and the one-buyer-to-one-agent rule.
+- Gold/dark luxury styling, phone first.
 - Playwright install at `~/workspace/projects/reel-DfWR5BWiGct/playwright-test/`
   for the browser test.
 
@@ -35,22 +32,22 @@ phone) makes it open fast and work offline.
 | File | What it does |
 |---|---|
 | `index.html` | Sign-in (pick your name + passcode) + install hint |
-| `board.html` | Masked ready-buyer board — 5 SAMPLE buyers, claim buttons |
+| `board.html` | Masked ready-buyer board — 4 SAMPLE buyers, claim buttons |
 | `my-leads.html` | Buyers you claimed, with outcome buttons |
 | `handover.html` | Handover sheet for one claimed buyer (SAMPLE data) |
-| `billing.html` | Billing — $499/month, payment NOT switched on yet |
-| `about.html` | Quinton's contact + his 10 real team listings, addresses only |
+| `billing.html` | Billing — $499/month, paid by Zelle, address never on the page |
+| `about.html` | About the portal — what it is, how it works, no names |
 | `install.html` | How to add the app to your home screen (iPhone + Android) |
 | `styles.css` | Gold/dark styling, phone first |
 | `app.js` | Sign-in, claims, outcomes — demo mode (phone only) or live mode (Worker) |
-| `data.js` | SAMPLE agents (Quinton first + 2 made-up) and 5 SAMPLE buyers |
+| `data.js` | SAMPLE agents (2 made-up) and 4 SAMPLE buyers |
 | `manifest.json` | App name, icons, standalone display, gold/dark colours |
 | `sw.js` | Service worker — saves the app shell on the phone (never API answers) |
-| `icon-192.png`, `icon-512.png` | Gold Q on dark, drawn with PIL (free, built here) |
+| `icon-192.png`, `icon-512.png` | Gold Y logo on dark (the app's own logo) |
+| `logo-y.webp` | The logo, original file |
 | `tests-agent-portal.spec.js` | The Playwright test (copy of the run copy) |
 | `worker/` | Cloudflare Worker + D1 — deployable, NOT deployed (see `worker/README.md`) |
 | `money-path-research.md` | The picks, limits, and drops behind this build |
-| `shots/` | Phone-size screenshots: sign-in, board, handover, my-leads |
 
 ## How the rules work in the app
 
@@ -58,8 +55,9 @@ phone) makes it open fast and work offline.
   preview) the passcode is not checked — the page says so, nothing
   is sent anywhere, and claims stay on this phone. In live mode
   (Worker address set in `app.js`) the Worker checks the passcode
-  against a stored hash and hands back a one-day token. Quinton is
-  first; the other two agents are marked SAMPLE.
+  against a stored hash and hands back a one-day token. The sign-in
+  list holds SAMPLE agents only until Bge approves the first real
+  agent.
 - **Board is masked.** Area, budget range, timeline, pre-approval,
   date ready, and "Checks passed". No name, no phone, no email —
   those stay hidden until a claim.
@@ -70,24 +68,22 @@ phone) makes it open fast and work offline.
   browser keeps on the device), so it survives closing the app. In
   live mode the claim is stored in the shared D1 database through
   the Worker, so every phone sees it.
-- **Pass-on rule.** Buyer C (Ana) said NO to being passed to another
-  agent, so only Quinton can claim her — other agents see
-  "Quinton only" instead of a claim button, and the claim is refused
-  in the code as well (and in the Worker, in live mode). Fixed Nov 6,
-  2026 after the scrubber flagged it; covered by the Playwright test.
-- **Handover sheet only after a claim.** It follows the template at
-  `~/workspace/goals/buyer-finder-service-for-real-estate-agents/files/buyer-handoff-sheet.md`,
-  filled with SAMPLE data: fictional first name, (555) 010-xxxx
-  number, firstname@example.com email, booked call time, what was
-  NOT done, and the three consent records + do-not-call check date.
+- **Pass-on rule.** A buyer who says NO to being passed to another
+  agent never reaches this board — with no originating agent in
+  this portal, there is nobody who could claim them. Only buyers
+  who said YES to pass-on appear here.
+- **Handover sheet only after a claim.** Filled with SAMPLE data:
+  fictional first name, (555) 010-xxxx number, firstname@example.com
+  email, booked call time, what was NOT done, and the three consent
+  records + do-not-call check date.
 - **My leads.** Outcome buttons: Called / No answer / Deal closed,
   saved on the phone only in demo mode, shared through the Worker
   in live mode.
-- **SAMPLE data only.** Buyers A–C are the plan's three; D (Pacific
-  Beach) and E (Escondido) are extra made-up examples in the same
-  shape. All phones are (555) 010-xxxx (set aside for fiction),
-  all emails are firstname@example.com. No farm leads — they are
-  sellers, locked, and never go in this app.
+- **SAMPLE data only.** Four made-up buyers (A North Park, B La
+  Jolla, D Pacific Beach, E Escondido) in the same shape. All phones
+  are (555) 010-xxxx (set aside for fiction), all emails are
+  firstname@example.com. No farm leads — they are sellers, locked,
+  and never go in this app.
 
 ## Run it (local only)
 
@@ -98,38 +94,35 @@ python3 -m http.server 8130
 # or the machine's address on the same Wi-Fi from a phone
 ```
 
-To try it: sign in as Quinton (type any passcode — demo mode does
+To try it: sign in as Maria (type any passcode — demo mode does
 not check it) → claim buyer A → see the handover sheet → My leads
-→ tap Called. Sign out, sign in as Maria, open buyer A's handover
+→ tap Called. Sign out, sign in as David, open buyer A's handover
 sheet → "Already claimed". To reset the demo, clear the site's data
 in the browser (or run the test, which uses a fresh browser each time).
 
-## Fail-able check — run Nov 6, 2026, all passed
+## Fail-able check — run Nov 6, 2026 evening, all passed
 
-Playwright test `tests-agent-portal.spec.js` (4 tests, 10.0s):
-sign-in page (3 agents, Quinton first, passcode boxes, demo-mode
-note) →
-board (5 masked SAMPLE buyers, no phone/email/name visible) →
+Playwright test `tests-agent-portal.spec.js` (3 passed, 1 skipped,
+8.1s): sign-in page (2 SAMPLE agents, passcode boxes, demo-mode
+note) → board (4 masked SAMPLE buyers, no phone/email/name visible) →
 handover before claim refused ("Not claimed yet") →
 claim buyer A → handover shows Sam, (555) 010-1001,
 sam@example.com, Thu Nov 6 at 6:00 PM Pacific →
-board drops to 4, buyer A gone →
+board drops to 3, buyer A gone →
 My leads shows buyer A, "Called" recorded and still there after
-reload → second agent (Maria) sees no buyer A and gets
+reload → second agent (David) sees no buyer A and gets
 "Already claimed" with no details →
 signed-out visitor to board/my-leads/handover is sent to sign-in →
-billing page shows $499/mo and "payment is NOT switched on" →
-live cross-context claim (local Worker + D1): wrong passcode
-refused, Quinton claims buyer A in one context, Maria's second
-context re-reads the board and buyer A is gone, her handover sheet
-is refused, Quinton's "Called" outcome sticks after reload →
-about page shows all 10 real listings, install page shows the
+billing page shows $499/mo by Zelle, address never on the page →
+about page says "separate project", shows how the portal works, and
+has no phone or email link anywhere → install page shows the
 iPhone steps → manifest valid, standalone, both icons load (200),
 service worker registered. Zero failed requests, zero page errors.
+The live cross-context claim test skips itself when no local Worker
+is running — it only "passes" when it actually runs.
 
-Static greps: no real phone number anywhere except Quinton's own
-published contact on about.html; no real buyer emails; no farm-lead
-data; only the five (555) 010-xxxx fiction numbers.
+Static greps: no real phone numbers anywhere; no real buyer emails;
+no farm-lead data; only the four (555) 010-xxxx fiction numbers.
 
 ## What changed — Nov 6, 2026 (money path, part 1)
 
@@ -143,10 +136,11 @@ data; only the five (555) 010-xxxx fiction numbers.
   conditional UPDATE, outcomes, and lockout after 5 wrong guesses.
   Deploy steps in `worker/README.md`. Going live is the owner's tap.
 - **Billing page** (`billing.html`, linked from the board nav and
-  the sign-in page): $499 a month per agent, what it includes,
-  cancel anytime — and a clear line that payment is NOT switched on
-  yet. No Stripe link exists, no charge is made, no subscription
-  exists. Nothing was created in Stripe.
+  the sign-in page): $499 a month per agent, paid by Zelle, what it
+  includes, cancel anytime — and a clear line that payment is NOT
+  switched on yet. No charge is made. No Zelle address is shown on
+  the page — Bge gives it to each approved agent one-to-one
+  (owner decision, Nov 6, 2026; Stripe dropped for this billing).
 - **Service worker fix:** it used to cache every GET answer,
   including the Worker's board answers, so a second phone kept
   seeing a buyer as free after it was claimed. It now only caches
@@ -159,7 +153,7 @@ data; only the five (555) 010-xxxx fiction numbers.
 
 `worker/` holds `worker.js` (all endpoints), `wrangler.toml`
 (D1 binding; the database id is a placeholder until deploy),
-`schema.sql` (tables + the 5 SAMPLE buyers + the 3 agents, passcodes
+`schema.sql` (tables + the 4 SAMPLE buyers + the 2 SAMPLE agents, passcodes
 seeded as `NOT-SET` so nothing can sign in until Bge sets a real
 passcode), `hash-passcode.mjs` (makes a salt + hash for one agent),
 and `README.md` with the deploy steps. Nothing in `worker/` has
@@ -181,15 +175,17 @@ then set the Worker address as `APP_CONFIG.apiBase` at the top of
 
 ## Billing — $499 a month, payment NOT switched on
 
-See `billing.html`. $499/month per agent: ready buyers, one buyer to
-one agent, handover sheet, booked call. Cancel anytime. Payment is
-NOT switched on yet — no Stripe link was created, no charge made, no
-subscription exists. When it opens, Bge makes one Stripe Payment
-Link in the Dashboard (no code) and sends it to the agent himself.
-The app does NOT check Stripe: Bge looks in the Dashboard, sees an
-active subscription, and only then hands over a passcode. If a
-payment fails or an agent cancels, Bge switches the agent off by
-hand in D1 (see `worker/README.md`).
+See `billing.html`. $499/month per agent, paid by Zelle: ready buyers,
+one buyer to one agent, handover sheet, booked call. Cancel anytime.
+Payment is NOT switched on yet — no charge is made, and the Zelle
+address is still to come (business bank in progress, expected Mon
+Nov 9, 2026). When it opens, Bge gives the Zelle address to each
+approved agent one-to-one, never on the public page.
+The app does NOT check Zelle: Bge looks in his bank, sees the $499
+arrived, and only then hands over a passcode. If a payment is missed,
+Bge switches the agent off by hand in D1 (see `worker/README.md`).
+Zelle does not bill monthly on its own — the agent sends $499 each
+month by the same date, and Bge checks it arrived.
 
 ## What is NOT done (honest gaps)
 
@@ -208,9 +204,9 @@ hand in D1 (see `worker/README.md`).
   Bge changes it fast. No "forgot my passcode" button — the agent
   asks Bge. Past ~20 agents, switch to Firebase Auth (see
   money-path-research.md).
-- **The app does not check Stripe.** Bge matches payments to agents
-  by hand in the Stripe Dashboard. If nobody watches it, a cancelled
-  agent keeps access.
+- **The app does not check Zelle.** Bge matches payments to agents
+  by hand in his bank account. If nobody watches it, an agent who
+  stopped paying keeps access.
 - **Free tier has no uptime promise**, community support only.
   Cloudflare is a company service, not open-source software — the
   code here is Bge's own and the data is plain SQL that can move.
@@ -218,7 +214,8 @@ hand in D1 (see `worker/README.md`).
 - Demo mode on one phone: claims and outcomes live in that phone's
   browser only. Anyone with the demo can sign in as any agent name
   (passcode not checked in demo mode).
-- No payment step: the $599 ready-buyer fee is not charged here.
-  Payment stays Bge's tap, by bank transfer, as in the plan.
+- No per-buyer fee is charged here: the portal charges $499 a month
+  per agent, and nothing per buyer. Payment stays Bge's tap, by
+  Zelle, as on the billing page.
 - Not published or deployed beyond the approved GitHub Pages
   preview. Going live with the Worker is the owner's tap only.

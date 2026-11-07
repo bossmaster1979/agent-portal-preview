@@ -152,7 +152,7 @@ async function agentFromToken(request, env) {
   ).bind(await sha256Hex(token)).first();
   if (!row || row.expires_at < Date.now()) return null;
   const agent = await env.DB.prepare(
-    "SELECT id, name, is_quinton FROM agents WHERE id = ? AND approved = 1"
+    "SELECT id, name FROM agents WHERE id = ? AND approved = 1"
   ).bind(row.agent_id).first();
   return agent || null;
 }
@@ -229,8 +229,6 @@ async function board(request, env, agent) {
       id: b.id, area: b.area, budget: b.budget, timeline: b.timeline,
       preapproval: b.preapproval, readySince: b.ready_since,
       scrubDate: b.scrub_date, checksPassed: true,
-      // Not personal data — just the rule flag the board needs to
-      // show "Quinton only" instead of a claim button.
       passOnConsent: b.pass_on_consent,
     })),
   });
@@ -245,15 +243,9 @@ async function claim(request, env, agent) {
   if (!buyerId) return json({ ok: false, error: "missing" }, 400);
 
   const buyer = await env.DB.prepare(
-    "SELECT id, pass_on_consent, claimed_by FROM buyers WHERE id = ?"
+    "SELECT id, claimed_by FROM buyers WHERE id = ?"
   ).bind(buyerId).first();
   if (!buyer) return json({ ok: false, error: "no-such-buyer" }, 404);
-
-  // Pass-on rule: a buyer who said NO to being passed to another agent
-  // goes to Quinton only. Checked here, on the server, not just in the app.
-  if (buyer.pass_on_consent === "No" && !agent.is_quinton) {
-    return json({ ok: false, error: "quinton-only" }, 403);
-  }
 
   // The one safe step. Only succeeds when nobody claimed it yet.
   const now = new Date().toISOString();

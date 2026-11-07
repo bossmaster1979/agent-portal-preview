@@ -12,8 +12,8 @@
 //      ONLY in the local D1 database, never in this repo: set your own
 //      with `node hash-passcode.mjs <agent-id> <passcode>` and the UPDATE
 //      line it prints, then use those same passcodes below.
-//      The test below expects the passcodes to be "test-passcode-123"
-//      for quinton and "test-passcode-456" for maria — set exactly those
+//      The test below expects the passcodes to be "test-passcode-456"
+//      for maria and "test-passcode-789" for david — set exactly those
 //      two locally, or edit the two fill() lines to match yours.
 //   2. A LIVE copy of the app (same files, apiBase pointed at the Worker)
 //      served at http://localhost:8131:
@@ -36,28 +36,28 @@ test("portal: sign-in, board masked, claim, double-claim refused, handover gated
   page.on("response", r => { if (r.status() >= 400) failed.push(r.url() + " -> " + r.status()); });
   page.on("pageerror", e => failed.push("pageerror: " + e.message));
 
-  // 1. Sign-in page loads; Quinton first, two SAMPLE agents, passcode boxes.
+  // 1. Sign-in page loads; two SAMPLE agents, passcode boxes.
   // Demo mode says plainly the passcode is not checked and nothing is sent.
   await page.goto(BASE + "/index.html");
   await expect(page.locator("h1")).toHaveText("Agent Portal");
   const agentCards = page.locator("#agent-list .card");
-  await expect(agentCards).toHaveCount(3);
-  await expect(agentCards.nth(0)).toContainText("Quinton Sanchez");
+  await expect(agentCards).toHaveCount(2);
+  await expect(agentCards.nth(0)).toContainText("Maria Torres");
+  await expect(agentCards.nth(0)).toContainText("SAMPLE");
   await expect(agentCards.nth(1)).toContainText("SAMPLE");
-  await expect(agentCards.nth(2)).toContainText("SAMPLE");
-  await expect(page.locator('input[type="password"]')).toHaveCount(3);
+  await expect(page.locator('input[type="password"]')).toHaveCount(2);
   await expect(page.locator("#mode-note")).toContainText("Demo mode");
   await expect(page.locator("body")).toContainText("passcode is not checked");
 
-  // 2. Sign in as Quinton (passcode filled, not checked in demo mode) ->
-  // board with 5 masked SAMPLE buyers, no phone/email visible.
+  // 2. Sign in as Maria (passcode filled, not checked in demo mode) ->
+  // board with 4 masked SAMPLE buyers, no phone/email visible.
   // The header now says the signed-in agent's own name, not anyone else's.
   await agentCards.nth(0).locator('input[type="password"]').fill("demo-passcode");
   await agentCards.nth(0).locator("button").click();
   await expect(page).toHaveURL(/board\.html/);
-  await expect(page.locator("#brand")).toContainText("QUINTON SANCHEZ");
+  await expect(page.locator("#brand")).toContainText("MARIA TORRES");
   await expect(page.locator("#brand")).toContainText("AGENT PORTAL");
-  await expect(page.locator("#board .card")).toHaveCount(5);
+  await expect(page.locator("#board .card")).toHaveCount(4);
   const boardText = await page.locator("#board").innerText();
   expect(boardText).not.toContain("(555)");
   expect(boardText).not.toContain("example.com");
@@ -80,9 +80,9 @@ test("portal: sign-in, board masked, claim, double-claim refused, handover gated
   await expect(page.locator("#sheet")).toContainText("sam@example.com");
   await expect(page.locator("#sheet")).toContainText("Thu Nov 6 at 6:00 PM Pacific");
 
-  // 5. Board no longer shows buyer A (4 left).
+  // 5. Board no longer shows buyer A (3 left).
   await page.goto(BASE + "/board.html");
-  await expect(page.locator("#board .card")).toHaveCount(4);
+  await expect(page.locator("#board .card")).toHaveCount(3);
   await expect(page.locator("#board")).not.toContainText("Ready buyer A");
 
   // 6. My leads shows buyer A; record "Called"; it sticks after reload.
@@ -94,29 +94,28 @@ test("portal: sign-in, board masked, claim, double-claim refused, handover gated
   await page.reload();
   await expect(page.locator("#mine")).toContainText("Called — spoke to the buyer");
 
-  // 7. Second agent cannot claim or view buyer A. Buyer C said no to
-  // pass-on, so only Quinton can claim her — Maria sees no claim button.
+  // 7. Second agent cannot claim or view buyer A.
   await page.evaluate(() => localStorage.removeItem("agentPortal.agent"));
   await page.goto(BASE + "/index.html");
   await page.locator("#agent-list .card").nth(1).locator('input[type="password"]').fill("demo-passcode");
   await page.locator("#agent-list .card").nth(1).locator("button").click();
   await expect(page).toHaveURL(/board\.html/);
-  // Maria signed in: the header says MARIA TORRES now, not Quinton.
-  await expect(page.locator("#brand")).toContainText("MARIA TORRES");
-  await expect(page.locator("#brand")).not.toContainText("QUINTON");
+  // David signed in: the header says DAVID CHEN now, not Maria.
+  await expect(page.locator("#brand")).toContainText("DAVID CHEN");
+  await expect(page.locator("#brand")).not.toContainText("MARIA");
   await expect(page.locator("#board")).not.toContainText("Ready buyer A");
-  await expect(page.locator("#board .card", { hasText: "Ready buyer C" })).toContainText("Quinton only");
-  await expect(page.locator("#board .card", { hasText: "Ready buyer C" }).locator("button")).toHaveCount(0);
-  expect(await page.evaluate(() => claimBuyer("C"))).toBe(false);
+  await expect(page.locator("#board .card")).toHaveCount(3);
   await page.goto(BASE + "/handover.html?buyer=A");
   await expect(page.locator("#sheet")).toContainText("Already claimed");
-  await expect(page.locator("#sheet")).toContainText("Quinton Sanchez");
+  await expect(page.locator("#sheet")).toContainText("Maria Torres");
   await expect(page.locator("#sheet")).not.toContainText("(555) 010-1001");
 
-  // 8. Other pages load: about (10 real listings, addresses only), install.
+  // 8. Other pages load: about (no names, no listings), install.
   await page.goto(BASE + "/about.html");
-  await expect(page.locator("body")).toContainText("4411 Carib Ct, San Diego, CA 92117");
-  await expect(page.locator("body")).toContainText("3476 Butler Pl, Escondido, CA 92027");
+  await expect(page.locator("body")).toContainText("How the portal works");
+  await expect(page.locator("body")).toContainText("separate project");
+  await expect(page.locator('a[href^="tel:"]')).toHaveCount(0);
+  await expect(page.locator('a[href^="mailto:"]')).toHaveCount(0);
   await page.goto(BASE + "/install.html");
   await expect(page.locator("h1")).toHaveText("Install the app");
   await expect(page.locator("body")).toContainText("Add to Home Screen");
@@ -149,15 +148,15 @@ test("portal: signed-out visitor going straight to board.html is sent to sign-in
   await expect(page).toHaveURL(/index\.html/);
 });
 
-test("portal: billing page shows $499/mo, says payment is not switched on, charges nothing", async ({ page }) => {
+test("portal: billing page shows $499/mo by Zelle, address never on page, charges nothing on its own", async ({ page }) => {
   const failed = [];
   page.on("response", r => { if (r.status() >= 400) failed.push(r.url() + " -> " + r.status()); });
   await page.goto(BASE + "/billing.html");
   await expect(page.locator("h1")).toHaveText("Billing");
   await expect(page.locator("body")).toContainText("$499 a month");
-  await expect(page.locator("body")).toContainText("Payment is NOT switched on yet");
-  await expect(page.locator("body")).toContainText("no charge is made");
-  await expect(page.locator("body")).toContainText("no subscription exists");
+  await expect(page.locator("body")).toContainText("Pay by Zelle");
+  await expect(page.locator("body")).toContainText("never shown on this page");
+  await expect(page.locator("body")).toContainText("no card form on this page");
   await expect(page.locator("body")).toContainText("Cancel anytime");
   await expect(page.locator("body")).toContainText("handover sheet");
   // No payment link anywhere on the page — nothing to tap, nothing charged.
@@ -203,18 +202,18 @@ test("live: claim in one browser context is visible as claimed in a second (Work
   await expect(p1.locator("#signin-error")).toContainText("Wrong passcode");
   await expect(p1).toHaveURL(/index\.html/);
 
-  // Context 1 signs in as Quinton (real passcode check), sees 5 buyers.
-  await p1.locator("#agent-list .card").nth(0).locator('input[type="password"]').fill("test-passcode-123");
+  // Context 1 signs in as Maria (real passcode check), sees 4 buyers.
+  await p1.locator("#agent-list .card").nth(0).locator('input[type="password"]').fill("test-passcode-456");
   await p1.locator("#agent-list .card").nth(0).locator("button").click();
   await expect(p1).toHaveURL(/board\.html/);
-  await expect(p1.locator("#board .card")).toHaveCount(5);
+  await expect(p1.locator("#board .card")).toHaveCount(4);
 
-  // Context 2 signs in as Maria, also sees 5 buyers.
+  // Context 2 signs in as David, also sees 4 buyers.
   await p2.goto(BASE_LIVE + "/index.html");
-  await p2.locator("#agent-list .card").nth(1).locator('input[type="password"]').fill("test-passcode-456");
+  await p2.locator("#agent-list .card").nth(1).locator('input[type="password"]').fill("test-passcode-789");
   await p2.locator("#agent-list .card").nth(1).locator("button").click();
   await expect(p2).toHaveURL(/board\.html/);
-  await expect(p2.locator("#board .card")).toHaveCount(5);
+  await expect(p2.locator("#board .card")).toHaveCount(4);
 
   // Context 1 claims buyer A through the Worker -> handover sheet.
   await p1.locator("#board .card", { hasText: "Ready buyer A" }).locator("button").click();
@@ -224,13 +223,13 @@ test("live: claim in one browser context is visible as claimed in a second (Work
   // Context 2 re-reads the board: buyer A is gone — the claim crossed
   // contexts through the shared store, not this phone's localStorage.
   await p2.goto(BASE_LIVE + "/board.html");
-  await expect(p2.locator("#board .card")).toHaveCount(4);
+  await expect(p2.locator("#board .card")).toHaveCount(3);
   await expect(p2.locator("#board")).not.toContainText("Ready buyer A");
 
   // Context 2 cannot see buyer A's handover sheet either.
   await p2.goto(BASE_LIVE + "/handover.html?buyer=A");
   await expect(p2.locator("#sheet")).toContainText("Already claimed");
-  await expect(p2.locator("#sheet")).toContainText("Quinton Sanchez");
+  await expect(p2.locator("#sheet")).toContainText("Maria Torres");
 
   // Context 1 records an outcome through the Worker; it sticks.
   await p1.goto(BASE_LIVE + "/my-leads.html");

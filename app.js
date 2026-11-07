@@ -13,8 +13,7 @@
  *    thing that talks to the shared database.
  *
  * The rules are the same in both modes: masked board, one buyer to
- * one agent, Quinton-only for buyers who said no to pass-on,
- * handover sheet only after a claim, outcomes on My leads. */
+ * one agent, handover sheet only after a claim, outcomes on My leads. */
 
 /* THE ONE SETTING: put the Worker address here to go live, e.g.
    "https://agent-portal-worker.<your-name>.workers.dev".
@@ -87,17 +86,14 @@ function signOut() {
 }
 
 /* ---- claims ----
-   Demo mode (sync, this phone only): the original rule. Kept sync so
-   the Playwright test can call claimBuyer() directly.
-   Pass-on rule (from the plan): a buyer who said NO to being passed
-   to another agent goes to Quinton only. Any other agent is refused. */
+   Demo mode (sync, this phone only). Kept sync so the Playwright
+   test can call claimBuyer() directly. */
 function canClaim(buyerId) {
   const agent = getAgent();
   if (!agent) return false;
   const buyer = buyerById(buyerId);
   if (!buyer) return false;
   if (getClaims()[buyerId]) return false;
-  if (buyer.passOnConsent === "No" && agent.id !== "quinton") return false;
   return true;
 }
 function claimBuyer(buyerId) {
@@ -111,7 +107,7 @@ function claimBuyer(buyerId) {
 }
 /* Live mode (async): the Worker decides, with its one conditional
    UPDATE — exactly one agent wins. Returns { ok } or { ok:false,
-   error: "already-claimed" | "quinton-only" | "not-signed-in" }. */
+   error: "already-claimed" | "not-signed-in" }. */
 async function claimBuyerLive(buyerId) {
   const { status, data } = await api("/api/claim", {
     method: "POST", body: JSON.stringify({ buyerId }),

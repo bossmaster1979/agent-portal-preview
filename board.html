@@ -55,9 +55,7 @@
         '<tr><th>Pre-approved</th><td>' + esc(b.preapproval) + '</td></tr>' +
         '<tr><th>Ready since</th><td>' + esc(b.readySince) + '</td></tr>' +
         '<tr><th>Checks</th><td><span class="check">Passed</span> — do-not-call checked ' + esc(b.scrubDate) + ', call / text / email consent recorded, not opted out.</td></tr></table>' +
-        (b.passOnConsent === "No" && agent.id !== "quinton"
-          ? '<p><strong>Quinton only</strong> — this buyer said no to being passed to another agent, so only Quinton can claim them.</p>'
-          : '<button class="btn" onclick="doClaim(\'' + b.id + '\')">Claim this buyer</button>') + '</div>'
+        '<button class="btn" onclick="doClaim(\'' + b.id + '\')">Claim this buyer</button></div>'
       ).join("");
     }
   }
@@ -66,16 +64,13 @@
       const res = await claimBuyerLive(id);
       if (res.ok) { location.href = "handover.html?buyer=" + id; return; }
       if (res.error === "not-signed-in") { location.href = "index.html"; return; }
-      if (res.error === "quinton-only") { alert("Quinton only — this buyer said no to being passed to another agent."); }
-      else { alert("Already claimed — this buyer already belongs to another agent. One buyer, one agent."); }
+      alert("Already claimed — this buyer already belongs to another agent. One buyer, one agent.");
       renderBoard();
       return;
     }
     if (claimBuyer(id)) { location.href = "handover.html?buyer=" + id; }
     else {
-      const b = buyerById(id);
-      if (b && b.passOnConsent === "No") { alert("Quinton only — this buyer said no to being passed to another agent."); }
-      else { alert("Already claimed — this buyer already belongs to another agent. One buyer, one agent."); }
+      alert("Already claimed — this buyer already belongs to another agent. One buyer, one agent.");
       location.reload();
     }
   }

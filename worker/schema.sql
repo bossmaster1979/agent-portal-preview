@@ -1,8 +1,10 @@
 -- Agent Portal — D1 schema + SAMPLE seed data.
 -- Run once against a fresh D1 database (see README.md in this folder).
--- SAMPLE data only: the same 5 made-up buyers as data.js. No real
+-- SAMPLE data only: the same 4 made-up buyers as data.js. No real
 -- people, no real phone numbers (555-0100 range, set aside for
 -- fiction), no real emails (example.com). No farm leads, ever.
+-- This portal is a separate project: no agent, buyer, listing, or
+-- account from any other project appears here.
 --
 -- Agents are seeded with passcode_hash 'NOT-SET' on purpose: no
 -- passcode works until Bge sets a real one with hash-passcode.mjs.
@@ -14,8 +16,7 @@ CREATE TABLE IF NOT EXISTS agents (
   role TEXT NOT NULL DEFAULT '',
   passcode_hash TEXT NOT NULL DEFAULT 'NOT-SET',
   passcode_salt TEXT NOT NULL DEFAULT '',
-  approved INTEGER NOT NULL DEFAULT 1,
-  is_quinton INTEGER NOT NULL DEFAULT 0
+  approved INTEGER NOT NULL DEFAULT 1
 );
 
 CREATE TABLE IF NOT EXISTS buyers (
@@ -58,19 +59,19 @@ CREATE TABLE IF NOT EXISTS failed_signins (
   locked_until INTEGER NOT NULL DEFAULT 0
 );
 
--- Agents: Quinton first, then the two SAMPLE agents, same as data.js.
-INSERT OR IGNORE INTO agents (id, name, role, is_quinton) VALUES
-  ('quinton', 'Quinton Sanchez', 'Real Estate Agent — Mike Blair Realty Group (LPT), DRE 02189291', 1),
-  ('maria', 'Maria Torres', 'SAMPLE agent — made-up example', 0),
-  ('david', 'David Chen', 'SAMPLE agent — made-up example', 0);
+-- Agents: the two SAMPLE agents, same as data.js. The first real
+-- agent is still to be approved by Bge.
+INSERT OR IGNORE INTO agents (id, name, role) VALUES
+  ('maria', 'Maria Torres', 'SAMPLE agent — made-up example'),
+  ('david', 'David Chen', 'SAMPLE agent — made-up example');
 
--- Buyers: the 5 SAMPLE buyers. Buyer C (Ana) said NO to pass-on,
--- so only Quinton can claim her — the Worker enforces that too.
+-- Buyers: the 4 SAMPLE buyers. A buyer who says NO to being passed
+-- to another agent never reaches this board — with no originating
+-- agent in this portal, there is nobody who could claim them.
 INSERT OR IGNORE INTO buyers
   (id, area, budget, timeline, preapproval, ready_since, first_name, phone, email, wants, call_time, text_consent, email_consent, pass_on_consent, consent_date, scrub_date)
 VALUES
   ('A', 'North Park', '$600,000 – $750,000', 'Now', 'Yes', 'Nov 5, 2026', 'Sam', '(555) 010-1001', 'sam@example.com', 'A 3-bedroom house near the park, close to schools.', 'Thu Nov 6 at 6:00 PM Pacific', 'Yes', 'Yes', 'Yes', 'Nov 5, 2026', 'Oct 30, 2026'),
   ('B', 'La Jolla', '$1,000,000 – $1,250,000', 'Soon', 'Not yet', 'Nov 5, 2026', 'Alex', '(555) 010-1002', 'alex@example.com', 'A condo with a sea view, two bedrooms, no stairs.', 'Fri Nov 7 at 10:00 AM Pacific', 'Yes', 'Yes', 'Yes', 'Nov 5, 2026', 'Oct 30, 2026'),
-  ('C', 'Chula Vista', '$500,000 – $650,000', 'Now', 'Yes', 'Nov 5, 2026', 'Ana', '(555) 010-1003', 'ana@example.com', 'A first home, 2 bedrooms, near family.', 'Thu Nov 6 at 7:30 PM Pacific', 'Yes', 'Yes', 'No', 'Nov 5, 2026', 'Oct 30, 2026'),
   ('D', 'Pacific Beach', '$750,000 – $900,000', 'Soon', 'Yes', 'Nov 5, 2026', 'Ben', '(555) 010-1004', 'ben@example.com', 'A townhouse within walking distance of the beach.', 'Sat Nov 8 at 11:00 AM Pacific', 'Yes', 'Yes', 'Yes', 'Nov 5, 2026', 'Oct 30, 2026'),
   ('E', 'Escondido', '$450,000 – $600,000', 'Now', 'Not yet', 'Nov 5, 2026', 'Mia', '(555) 010-1005', 'mia@example.com', 'A house with a yard for two dogs.', 'Fri Nov 7 at 5:00 PM Pacific', 'Yes', 'Yes', 'Yes', 'Nov 5, 2026', 'Oct 30, 2026');

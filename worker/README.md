@@ -17,8 +17,7 @@ no Cloudflare account was touched by this build.
 - `POST /api/claim` — ONE conditional UPDATE ("mark claimed only if
   nobody claimed it yet"), so exactly one agent wins even if two tap
   Claim at the same second. D1 has no BEGIN/COMMIT transactions, so
-  this single step is the safe way. Also enforces the Quinton-only
-  rule for buyers who said no to pass-on, on the server.
+  this single step is the safe way.
 - `GET /api/handover?buyer=X` — full details only for the agent who
   claimed that buyer.
 - `GET /api/my-leads` — buyers this agent claimed, with outcomes.
@@ -32,7 +31,7 @@ no Cloudflare account was touched by this build.
 |---|---|
 | `worker.js` | The Worker. All endpoints, hashing, lockout, claim step. |
 | `wrangler.toml` | Worker name + D1 binding. `database_id` is a placeholder until deploy. |
-| `schema.sql` | D1 tables + the 5 SAMPLE buyers + the 3 agents. Passcodes seeded as `NOT-SET` — no passcode works until Bge sets one. |
+| `schema.sql` | D1 tables + the 4 SAMPLE buyers + the 2 SAMPLE agents. Passcodes seeded as `NOT-SET` — no passcode works until Bge sets one. |
 | `hash-passcode.mjs` | Makes a salt + hash for one agent's passcode. Run locally, store the hash in D1. The passcode itself is never stored. |
 | `README.md` | This file. |
 
@@ -40,12 +39,14 @@ no Cloudflare account was touched by this build.
 
 ```sh
 cd ~/workspace/projects/agent-portal-app/worker
-npx wrangler login            # Cloudflare account that already holds Quinton's site
+npx wrangler login            # Bge's OWN Cloudflare account — never
+                              # another project's account, never
+                              # anyone else's login
 npx wrangler d1 create agent-portal
 # copy the real database_id it prints into wrangler.toml
 npx wrangler d1 execute agent-portal --remote --file schema.sql
 # one passcode per agent (8+ characters, handed over by call/text):
-node hash-passcode.mjs quinton <passcode>
+node hash-passcode.mjs maria <passcode>
 # run the UPDATE line it prints, then repeat for each agent
 npx wrangler deploy
 # copy the Worker address it prints (https://agent-portal-worker.<name>.workers.dev)
@@ -61,8 +62,8 @@ in DEMO mode (see the app README).
 cd ~/workspace/projects/agent-portal-app/worker
 npx wrangler dev --local --port 8787
 # in another shell: set a test passcode in the LOCAL database only
-node hash-passcode.mjs quinton test-passcode-123
-npx wrangler d1 execute agent-portal --local --command "UPDATE agents SET passcode_hash = '<hash>', passcode_salt = '<salt>' WHERE id = 'quinton';"
+node hash-passcode.mjs maria test-passcode-456
+npx wrangler d1 execute agent-portal --local --command "UPDATE agents SET passcode_hash = '<hash>', passcode_salt = '<salt>' WHERE id = 'maria';"
 curl http://localhost:8787/api/health
 ```
 
@@ -95,7 +96,8 @@ Their token stops working at once, and sign-in is refused.
   change it fast. No "forgot my passcode" button — the agent asks
   Bge, who sets a new one. Past ~20 agents, switch to Firebase Auth
   (see the research file).
-- The app does NOT check Stripe. Bge looks in the Stripe Dashboard,
-  sees an active $499/month subscription, and only then hands over
-  a passcode. If a payment fails or an agent cancels, Bge switches
+- The app does NOT check Zelle (owner decision, Nov 6, 2026 —
+  Stripe dropped for this billing). Bge looks in his bank, sees
+  the $499 Zelle payment arrived, and only then hands over
+  a passcode. If a payment is missed, Bge switches
   the agent off by hand (see above).

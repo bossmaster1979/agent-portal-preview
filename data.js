@@ -1,18 +1,24 @@
 /* Agent Portal — SAMPLE data only. No real buyers, no real phone numbers,
    no real emails. Fictional first names only; phone numbers use the
    555-0100 range, which is set aside for fiction; emails use example.com,
-   which is set aside for examples. Farm leads never go in this file. */
+   which is set aside for examples. Farm leads never go in this file.
+   This portal is a separate project: no agent, buyer, listing, or
+   account from any other project appears here. The first real agent
+   is still to be approved by Bge — until then the sign-in list holds
+   SAMPLE agents only. */
 const AGENTS = [
-  { id: "quinton", name: "Quinton Sanchez", role: "Real Estate Agent — Mike Blair Realty Group (LPT), DRE 02189291", first: true, sample: false },
   { id: "maria", name: "Maria Torres", role: "SAMPLE agent — made-up example", first: false, sample: true },
   { id: "david", name: "David Chen", role: "SAMPLE agent — made-up example", first: false, sample: true }
 ];
 
 /* Every buyer below passed the checks before reaching the board:
    DNC scrub date recorded, call + text + email consent recorded,
-   not opted out. That is the gate rule reused from the parked
-   multi-user build (gate/GATE-SPEC.md). A buyer who fails any
-   check never appears here. */
+   not opted out. That is the gate rule: a buyer only shows when the
+   do-not-call check date + call/text/email consent are recorded and
+   they did not opt out. A buyer who fails any check never appears
+   here. A buyer who says NO to being passed to another agent never
+   reaches this board either — with no originating agent in this
+   portal, there is nobody who could claim them. */
 const BUYERS = [
   {
     id: "A", area: "North Park", budget: "$600,000 – $750,000", timeline: "Now",
@@ -30,15 +36,6 @@ const BUYERS = [
     wants: "A condo with a sea view, two bedrooms, no stairs.",
     call: "Fri Nov 7 at 10:00 AM Pacific",
     textConsent: "Yes", emailConsent: "Yes", passOnConsent: "Yes",
-    consentDate: "Nov 5, 2026", scrubDate: "Oct 30, 2026"
-  },
-  {
-    id: "C", area: "Chula Vista", budget: "$500,000 – $650,000", timeline: "Now",
-    preapproval: "Yes", readySince: "Nov 5, 2026",
-    firstName: "Ana", phone: "(555) 010-1003", email: "ana@example.com",
-    wants: "A first home, 2 bedrooms, near family.",
-    call: "Thu Nov 6 at 7:30 PM Pacific",
-    textConsent: "Yes", emailConsent: "Yes", passOnConsent: "No",
     consentDate: "Nov 5, 2026", scrubDate: "Oct 30, 2026"
   },
   {
