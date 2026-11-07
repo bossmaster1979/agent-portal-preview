@@ -42,6 +42,27 @@ function getOutcomes() {
 function saveClaims(c) { localStorage.setItem(LS_CLAIMS, JSON.stringify(c)); }
 function saveOutcomes(o) { localStorage.setItem(LS_OUTCOMES, JSON.stringify(o)); }
 
+/* Demo mode only: forget anything saved from an older version — a
+   signed-in agent who no longer exists, or claims by them or for a
+   buyer who is no longer on the board. Without this, a phone that
+   tried the old version keeps showing the old agent's name at the
+   top even after the app files are updated. The live Worker is the
+   authority in live mode, so this never runs there. */
+(function cleanStaleDemoData() {
+  if (isLive()) return;
+  try {
+    const agent = JSON.parse(localStorage.getItem(LS_AGENT) || "null");
+    if (agent && !AGENTS.find(a => a.id === agent.id)) localStorage.removeItem(LS_AGENT);
+    const claims = JSON.parse(localStorage.getItem(LS_CLAIMS) || "{}");
+    let changed = false;
+    Object.keys(claims).forEach(id => {
+      const c = claims[id];
+      if (!buyerById(id) || !AGENTS.find(a => a.id === (c && c.agentId))) { delete claims[id]; changed = true; }
+    });
+    if (changed) localStorage.setItem(LS_CLAIMS, JSON.stringify(claims));
+  } catch (e) { /* keep going with a clean slate */ }
+})();
+
 /* ---- live-mode calls to the Worker ---- */
 async function api(path, opts) {
   // cache: "no-store" matters: without it the browser can serve a
