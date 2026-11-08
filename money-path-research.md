@@ -1,8 +1,8 @@
 # Agent Portal — money-path research
 
 **Date:** 5 November 2026. **Research only** — nothing built, installed, signed up for, charged, or published.
-**Update Nov 6, 2026 — pick (c) SUPERSEDED:** the owner chose Zelle, not Stripe, for the $499/month billing. The Stripe research below is kept as history only — do not follow it for billing. The live billing page (`billing.html`) and the app/worker READMEs now say Zelle.
-**Owner:** Bge. **Money model decided:** $499 a month per agent, leads included, no per-buyer fee for app agents.
+**Update Nov 7, 2026 — money model CHANGED:** the owner dropped $499/month. **New model: free to join, $100 per ready buyer claimed** (per-lead). Agents top up $500 by Zelle; Bge adds it to their balance by hand after checking the bank. Cap: 3 buyers waiting for a call; a buyer with no call in 48 hours goes back on the board and the $100 is refunded. The $499/month lines below are kept as history only — do not follow them for billing. The live billing page (`billing.html`) and the app/worker READMEs now say per-lead.
+**Owner:** Bge. **Money model decided:** free to join, $100 per claimed buyer, no monthly charge.
 **Separate project (Nov 6, 2026):** this portal has no connection to any other project — no other agent's name, listings, accounts, or data are used here.
 **What exists today:** a demo installable web app (a "PWA" — a website that installs on a phone like an app) at `~/workspace/projects/agent-portal-app/`, static files only, no server, hosted free on GitHub Pages (public repo `bossmaster1979/agent-portal-preview`, SAMPLE data only). Agents sign in by tapping a name. Claims and outcomes live in one phone's browser only (a small store the browser keeps on the device, called localStorage).
 
