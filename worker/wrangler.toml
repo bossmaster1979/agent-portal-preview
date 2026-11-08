@@ -3,11 +3,10 @@ main = "worker.js"
 compatibility_date = "2026-11-05"
 
 # D1 database for the Agent Portal (shared board, claims, outcomes).
-# The database_id below is a placeholder for local testing only.
-# At deploy time, replace it with the real id from `wrangler d1 create`
-# (see README.md). The Worker is NOT deployed yet — going live is the
-# owner's tap.
+# Production database, created Nov 7, 2026 (owner's go to deploy live).
+# Local testing uses `wrangler d1 execute --local` against this same
+# file — the local miniflare copy is separate from the remote one.
 [[d1_databases]]
 binding = "DB"
 database_name = "agent-portal"
-database_id = "00000000-0000-0000-0000-000000000000"
+database_id = "10e9e9a8-ddbb-4b6d-b06a-8a9818efab81"
